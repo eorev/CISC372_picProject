@@ -14,7 +14,7 @@
 typedef struct {
     Image* srcImage;
     Image* destImage;
-    double* algorithm;
+    Matrix algorithm;
     int startRow;
     int endRow;
 } ThreadData;
@@ -78,19 +78,18 @@ void convolute(Image* srcImage,Image* destImage,Matrix algorithm){
 }
 
 void* thread_convolute(void* arg) {
-    // Cast the void pointer argument to a ThreadData pointer.
     ThreadData* data = (ThreadData*) arg;
-
-    // Extract the data from the ThreadData struct.
     Image* srcImage = data->srcImage;
     Image* destImage = data->destImage;
-    double* algorithm = data->algorithm;
+    Matrix algorithm;
+    for(int i = 0; i < 3; ++i)
+        for(int j = 0; j < 3; ++j)
+            algorithm[i][j] = data->algorithm[i][j];
 
-    // Extract the start and end rows.
     int startRow = data->startRow;
     int endRow = data->endRow;
 
-    int row,pix,bit,span;
+    int row, pix, bit, span;
     span = srcImage->bpp * srcImage->bpp;
 
     for (row = startRow; row < endRow; row++) {
@@ -160,17 +159,13 @@ int main(int argc,char** argv){
         threadData[i] = (ThreadData) {
             .srcImage = &srcImage,
             .destImage = &destImage,
-            .algorithm = algorithms[type],
             .startRow = startRow,
             .endRow = endRow
         };
+        for(int j = 0; j < 3; ++j)
+            for(int k = 0; k < 3; ++k)
+                threadData[i].algorithm[j][k] = algorithms[type][j][k];  
         pthread_create(&threads[i], NULL, thread_convolute, (void*)&threadData[i]);
-
-    }
-
-    // Wait for threads to finish
-    for(int i = 0; i < NUM_THREADS; ++i){
-        pthread_join(threads[i], NULL);
     }
 
     // Change output image
