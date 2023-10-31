@@ -3,12 +3,21 @@
 #include <time.h>
 #include <string.h>
 #include "image.h"
+#include <pthread.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
+
+typedef struct {
+    Image* srcImage;
+    Image* destImage;
+    Matrix algorithm;
+    int startRow;
+    int endRow;
+} ThreadData;
 
 //An array of kernel matrices to be used for image convolution.  
 //The indexes of these match the enumeration from the header file. ie. algorithms[BLUR] returns the kernel corresponding to a box blur.
@@ -68,6 +77,33 @@ void convolute(Image* srcImage,Image* destImage,Matrix algorithm){
     }
 }
 
+void* thread_convolute(void* arg) {
+    // Cast the void pointer argument to a ThreadData pointer.
+    ThreadData* data = (ThreadData*) arg;
+
+    // Extract the data from the ThreadData struct.
+    Image* srcImage = data->srcImage;
+    Image* destImage = data->destImage;
+    Matrix algorithm = data->algorithm;
+
+    // Extract the start and end rows.
+    int startRow = data->startRow;
+    int endRow = data->endRow;
+
+    int row,pix,bit,span;
+    span = srcImage->bpp * srcImage->bpp;
+
+    for (row = startRow; row < endRow; row++) {
+        for (pix = 0; pix < srcImage->width; pix++) {
+            for (bit = 0; bit < srcImage->bpp; bit++) {
+                destImage->data[Index(pix,row,srcImage->width,bit,srcImage->bpp)]=getPixelValue(srcImage,pix,row,bit,algorithm);
+            }
+        }
+    }
+
+    return NULL;
+}
+
 //Usage: Prints usage information for the program
 //Returns: -1
 int Usage(){
@@ -111,7 +147,33 @@ int main(int argc,char** argv){
     destImage.height=srcImage.height;
     destImage.width=srcImage.width;
     destImage.data=malloc(sizeof(uint8_t)*destImage.width*destImage.bpp*destImage.height);
-    convolute(&srcImage,&destImage,algorithms[type]);
+
+    // Create the thread data
+    int NUM_THREADS = 4
+    int rowsPerThread = srcImage.height / NUM_THREADS;
+    pthread_t threads[NUM_THREADS];
+    ThreadData threadData[NUM_THREADS];
+
+    for (int i = 0; i < NUM_THREADS; i++){
+        int startRow = i * rowsPerThread;
+        int endRow = (i == NUM_THREADS - 1) ? srcImage.height : startRow + rowsPerThread;
+        threadData[i] = (ThreadData) {
+            .srcImage = &srcImage,
+            .destImage = &destImage,
+            .algorithm = algorithms[type],
+            .startRow = startRow,
+            .endRow = endRow
+        };
+        pthread_create(&threads[i], NULL, thread_convolute, (void*)&threadData[i]);
+
+    }
+
+    // Wait for threads to finish
+    for(int i = 0; i < NUM_THREADS; ++i){
+        pthread_join(threads[i], NULL);
+    }
+
+    // Change output image
     stbi_write_png("output.png",destImage.width,destImage.height,destImage.bpp,destImage.data,destImage.bpp*destImage.width);
     stbi_image_free(srcImage.data);
     
