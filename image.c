@@ -14,7 +14,7 @@
 typedef struct {
     Image* srcImage;
     Image* destImage;
-    Matrix algorithm;
+    double* algorithm;
     int startRow;
     int endRow;
 } ThreadData;
@@ -84,7 +84,7 @@ void* thread_convolute(void* arg) {
     // Extract the data from the ThreadData struct.
     Image* srcImage = data->srcImage;
     Image* destImage = data->destImage;
-    Matrix algorithm = data->algorithm;
+    double* algorithm = data->algorithm;
 
     // Extract the start and end rows.
     int startRow = data->startRow;
@@ -149,7 +149,7 @@ int main(int argc,char** argv){
     destImage.data=malloc(sizeof(uint8_t)*destImage.width*destImage.bpp*destImage.height);
 
     // Create the thread data
-    int NUM_THREADS = 4
+    int NUM_THREADS = 8;
     int rowsPerThread = srcImage.height / NUM_THREADS;
     pthread_t threads[NUM_THREADS];
     ThreadData threadData[NUM_THREADS];
