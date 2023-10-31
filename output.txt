@@ -1,0 +1,9 @@
+Script started on Mon Oct 30 23:07:07 2023
+]0;eorev@r1n00.darwin:~/CISC372_picProject[?1034h[eorev@r1n00 CISC372_picProject]$ srun ./image pic1.jpg gauss
+Took 7 seconds
+]0;eorev@r1n00.darwin:~/CISC372_picProject[eorev@r1n00 CISC372_picProject]$ srun ./image_omp pic1.jpg gauss
+Took 7 seconds
+]0;eorev@r1n00.darwin:~/CISC372_picProject[eorev@r1n00 CISC372_picProject]$ exit
+exit
+
+Script done on Mon Oct 30 23:07:47 2023
